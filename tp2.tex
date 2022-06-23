@@ -1,0 +1,177 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}            %For \leadsto
+\usepackage{amsmath}             %For \text
+\usepackage{fancybox}            %For \ovalbox
+\usepackage{hyperref}            %For \ovalbox
+\usepackage[letterpaper,margin=1in,includehead]{geometry}
+
+\title{Travail pratique \#2}
+\author{IFT-2035}
+
+\begin{document}
+
+\maketitle
+
+\newcommand \mML {\ensuremath\mu\textsl{ML}}
+\newcommand \kw [1] {\textsf{#1}}
+\newcommand \id [1] {\textsl{#1}}
+\newcommand \punc [1] {\kw{`#1'}}
+\newenvironment{outitemize}{
+  \begin{itemize}
+  \let \origitem \item \def \item {\origitem[]\hspace{-18pt}}
+}{
+  \end{itemize}
+}
+
+\section{Survol}
+
+Ce TP a pour but de vous familiariser avec le langage C, les pointeurs,
+la gestion de mémoire explicite.
+%%
+Comme pour le TP précédent, les étapes sont les suivantes:
+\begin{enumerate}
+\item Parfaire sa connaissance de C.
+\item Lire et comprendre cette donnée.
+\item Compléter le code fourni.
+\item Écrire un rapport.  Il doit décrire \textbf{votre} expérience pendant
+  les points précédents: problèmes rencontrés, surprises, choix que vous
+  avez dû faire, options que vous avez sciemment rejetées, etc...  Le
+  rapport ne doit pas excéder 5 pages plus 2 d'annexe (voir plus loin).
+\end{enumerate}
+%% 
+Ce travail est à faire en groupes de 2 étudiants.  Le rapport (au format
+\LaTeX) et le code sont à remettre par remise électronique avant la date
+indiquée.  Aucun retard ne sera accepté.  Indiquez clairement votre nom au
+début de chaque fichier.
+
+Si un étudiant préfère travailler seul, libre à lui, mais l'évaluation de
+son travail n'en tiendra pas compte.
+Des groupes de 3 ou plus sont \textbf{exclus}.
+
+\section{Une bibliothèque de gestion mémoire}
+
+Vous devez écrire une bibliothèque de gestion mémoire pour des
+chaînes de caractères qui fournisse les fonctions suivantes:
+%%
+\begin{verbatim}
+   typedef struct String String;
+
+   String *str_alloc   (size_t size);
+   size_t  str_size    (String *str);
+   char   *str_data    (String *str);
+   void    str_free    (String *str);
+
+   String *str_concat  (String *s1, String *s2);
+
+   void    str_compact  (void);
+   size_t  str_livesize (void);
+   size_t  str_freesize (void);
+   size_t  str_usedsize (void);
+\end{verbatim}
+%%
+Libre à vous de définir \texttt{struct String} comme bon vous semble.
+La fonction \id{str\_alloc} crée une nouvelle chaîne de taille \id{size}.
+La fonction \id{str\_size} renvoie la taille d'une chaîne et la fonction
+\id{str\_data} renvoie le tableau de bytes de la chaîne.
+Finalement \id{str\_free} permet de libérer l'espace occupé par une chaîne
+et \id{str\_compact} permet de compacter l'espace mémoire occupé par toutes
+les chaînes de manière à réduire la fragmentation (c'est à dire réduire le
+nombre de ``trous'' libres entre les espaces encore utilisés, pour les
+remplacer par un seul (ou un petit nombre) de plus gros trou(s)).
+
+Pour que la compaction soit possible, chaque \texttt{String} sera composé de
+2 objets en mémoire: l'objet de type \texttt{struct String} qui a une taille
+fixe indépendente de la longueur de la chaîne et qui ne peut pas être
+déplacé par \id{str\_compact}, et un autre objet qui contient les bytes de
+la chaîne de caractères (et cet objet-là peut être déplacé par
+\id{str\_compact}).
+
+La compaction présume que le reste du programme (le \emph{mutateur}),
+n'utilise pas de \id{str\_data} pendant la compaction et de plus il doit
+faire attention à ne plus utiliser les \id{str\_data} obtenus avant la
+compaction vu qu'ils peuvent ne plus être valides.
+
+Vous devez écrire le code dans un fichier \texttt{stralloc.c}.
+Cette bibliothèque n'a pas le droit d'utiliser \id{malloc} pour obtenir de la
+mémoire.  À la place, il faudra utiliser des fonctionnalités de plus bas
+niveau, plus précisément \id{mmap} et \id{munmap}.  Ces fonctions peuvent
+varier un peu entre différents systèmes d'exploitation, donc assurez-vous
+que votre code fonctionne dans un système GNU/Linux raisonnablement récent.
+
+\id{mmap} ne peut allouer que des multiples de pages (i.e. des multiples de
+4KB par exemple).  Il faudra donc souvent les partager entre plusieurs
+chaînes de caractères.  De plus \id{mmap} est relativement coûteux, donc il
+est préférable de l'utiliser moins souvent en allouant plus de mémoire
+à la fois.
+
+Les fonctions \id{str\_livesize}, \id{str\_freesize}, et \id{str\_usedsize}
+permettent de mesurer quel espace est utilisé pour quoi.
+
+\section{Ce que vous devez faire}
+
+\begin{itemize}
+\item Écrire des tests dans \texttt{tests.c}.
+\item Écrire le code dans \texttt{stralloc.c}.
+\item Analyser le comportement de votre code (maximum 2 pages en annexe du
+  rapport).  Il s'agit ici d'une analyse principalement théorique: mémoire
+  effectivement consommée pour stocker une chaîne de taille N; nombre
+  d'opérations nécessaires pour allouer une nouvelle chaîne, pour libérer
+  une chaîne, pour compacter l'espace; impact de la fragmentation, ...
+\item Écrire le reste du rapport.
+\end{itemize}
+
+Le code fourni dans \texttt{stralloc.h} ne peut pas être changé, à moins d'une
+très bonne raison. \\
+Remarquez que ce TP peut se décomposer en 3 parties:
+\begin{enumerate}
+\item Implanter seulement \id{str\_alloc}, \id{str\_size} et \id{str\_data};
+  utiliser pour \id{str\_free} et \id{str\_compact} une implantation triviale
+  qui ne fait rien.
+\item Modifier le code pour implanter un vrai \id{str\_free}.
+\item Modifier le code pour implanter un vrai \id{str\_compact}.
+\end{enumerate}
+
+\section{Remise}
+
+Pour la remise, vous devez remettre trois fichiers (\texttt{stralloc.c},
+\texttt{tests.c}, et \texttt{rapport.tex}) par la page Moodle (aussi
+nommé StudiUM) du cours.  Assurez-vous que le rapport compile correctement
+sur \texttt{ens.iro} (auquel vous pouvez vous connecter par SSH).
+
+\section{Détails}
+%%
+\begin{itemize}
+\item La note sera divisée comme suit: 25\% pour le rapport, 15\% pour les
+  tests, 60\% pour le code C.
+
+\item Un bon point de départ pour vous aider à décider comment gérer vos
+  pages de mémoire est
+  \\ à \url{http://www.memorymanagement.org/articles/alloc.html}.
+
+\item Tout usage de matériel (code ou texte) emprunté à quelqu'un d'autre
+  (ou trouvé sur le web) doit être dûment mentionné, sans quoi cela sera
+  considéré comme du plagiat.
+
+\item Chaque ligne de code doit faire moins de 80 caractères.
+  Tout dépassement sera considéré comme une erreur.
+
+\item Votre code doit compiler avec \texttt{gcc -Wall} sans
+  générer plus d'avertissements que le code fourni.
+
+\item Vérifiez la page web du cours, pour d'éventuels errata, et d'autres
+  indications supplémentaires.
+
+\item La note est basée d'une part sur des tests automatiques, d'autre part
+  sur la lecture du code, ainsi que sur le rapport.  Le critère le plus
+  important, est que votre code doit se comporter de manière correcte.
+  Ensuite, vient la qualité du code: plus c'est simple, mieux c'est.
+  S'il y a beaucoup de commentaires, c'est généralement un symptôme que le
+  code n'est pas clair; mais bien sûr, sans commentaires le code (même
+  simple) est souvent incompréhensible.
+\end{itemize}
+
+\end{document}
+
+%% arch-tag: 25121aff-ecf7-418a-9b39-3f7100028f8b
