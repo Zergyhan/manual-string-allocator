@@ -33,7 +33,6 @@
  * and copying the old one over, then freeing the old one.
  */
 
-#define advance_byte_void(ptr, n) ((ptr) = (void *)((char *)(ptr) + (n)))
 #define advance_word_size_t(ptr, n) ((ptr) = (size_t *)((size_t *)(ptr) + (n)))
 
 struct String {
@@ -81,7 +80,7 @@ size_t first_free_cell(size_t word) {
 /// \param d Double to round.
 /// \return d, rounded to the highest size_t integer.
 size_t ceil_size_t(double d) {
-    return (size_t) (size_t) d + (d - (size_t) d > 0);
+    return (size_t) (size_t) d + (d - (double)(size_t) d > 0);
 }
 
 /// Returns the pointer of the first available cell that matches
