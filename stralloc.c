@@ -77,6 +77,9 @@ size_t first_free_cell(size_t word) {
     return -1;
 }
 
+/// Ceiling function, rounds to the next highest integer.
+/// \param d Double to round.
+/// \return d, rounded to the highest size_t integer.
 size_t ceil_size_t(double d) {
     return (size_t) (size_t) d + (d - (size_t) d > 0);
 }
@@ -289,14 +292,24 @@ void str_free(String *str) {
     return;
 }
 
+/// Gets the size of the string
+/// \param str String to get the size of
+/// \return Size of the string
 size_t str_size(String *str) {
     return str->size;
 }
 
+/// Gets the pointer of the data in the string
+/// \param str String to get the data from
+/// \return Pointer to the data in the string
 char *str_data(String *str) {
     return str->data;
 }
 
+/// Concatenates two strings together and returns the pointer to the new string.
+/// \param s1 The first string to concatenate
+/// \param s2 The second string to concatenate
+/// \return Pointer to the new string
 String *str_concat(String *s1, String *s2) {
     size_t s1size = str_size(s1);
     size_t s2size = str_size(s2);
@@ -309,15 +322,18 @@ String *str_concat(String *s1, String *s2) {
     return s;
 }
 
+/// Compacts the used data memory so that it is de-fragmented.
 void str_compact(void) {
     /* Not implemented.  */
 }
 
+/// Returns the amount of memory used by the strings.
 size_t str_livesize(void) {
     /* Not implemented.  */
     return 0;
 }
 
+///
 size_t str_freesize(void) {
     /* Not implemented.  */
     return 0;
