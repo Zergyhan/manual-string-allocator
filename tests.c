@@ -44,11 +44,11 @@ int main (int argc, char **argv)
   /* La boucle ci-dessus a généré assez de gros trous pour que
      `str_compact` aie de quoi rendre de la mémoire au système!  */
   ASSERT (before > str_usedsize ());
-  
+
   writestr (s1); writestr (s2); printf ("\n");
 
   /* ¡¡¡ COMPLÉTER ICI !!!    Ajoutez vos tests ici.  */
-  
+
   size_t live = str_livesize ();
   size_t free = str_freesize ();
   size_t used = str_usedsize ();

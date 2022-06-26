@@ -73,6 +73,7 @@ size_t first_free_cell(size_t word) {
             return i;
         }
     }
+
     return -1;
 }
 
@@ -89,9 +90,10 @@ char *request_data(String *cell) {
     size_t *head = handler_data;
     size_t *prev = head;
     size_t *curr = (size_t *) *head;
+    size_t *next = (size_t *) *curr;
     // The size of the area in bytes.
     size_t area_size = *(curr + 1);
-    size_t *next = (size_t *) *curr;
+
     while (curr != NULL) {
         if (area_size >= cell->allocated) {
             // Found a cell that matches the size
@@ -103,7 +105,8 @@ char *request_data(String *cell) {
             if (cell->allocated == area_size) {
                 // Changes linked list so that it is taken out of the list
                 *prev = (size_t) next;
-            } else {
+            }
+            else {
                 // Split the cell into two cells, taking the first one,
                 // pointing prev to the second one,
                 // and pointing the second one to next.
@@ -114,19 +117,22 @@ char *request_data(String *cell) {
                 if (allocated_words == 1) {
                     allocated_words++;
                 }
+
                 // The location of the second new cell
-                size_t *new_cell = (size_t *) curr +
-                                   allocated_words;
+                size_t *new_cell = (size_t *) curr + allocated_words;
+
                 // Point the new cell to the next cell
                 *new_cell = (size_t) next;
+
                 // Set the size of the new cell
-                *(new_cell + 1) = area_size -
-                                  cell->allocated;
+                *(new_cell + 1) = area_size - cell->allocated;
+
                 // Point the previous cell to the new cell
                 *prev = (size_t) new_cell;
             }
             return (char *) curr;
         }
+
         prev = curr;
         curr = next;
         if (curr != NULL) {
@@ -134,6 +140,7 @@ char *request_data(String *cell) {
             next = (size_t *) *curr;
         }
     }
+
     // If all is null, loop finishes and doesn't return what we want,
     // forced to return null
     return NULL;
@@ -149,6 +156,7 @@ String *request_string() {
     // Advances to the next word, priming it
     size_t *inspector = handler_string;
     advance_word_size_t(inspector, 1);
+
     size_t word_offset = 0;
     size_t index = 0;
     bool found = false;
@@ -156,7 +164,7 @@ String *request_string() {
         index = first_free_cell(*inspector);
         if (index != -1) {
             found = true;
-            // Flip the bit to 1 to signify we're taking it
+            // Flip the bit to 1 to signify we're taking it with OR mask
             *inspector |= (1 << (sizeof(size_t) * 8 - index - 1));
             break;
         }
@@ -166,6 +174,7 @@ String *request_string() {
     if (!found) {
         return NULL;
     }
+
     size_t cell_index = word_offset * sizeof(size_t) * 8 + index;
     // Advance to the first cell_open metadata,
     // then advance num_of_cells/64 to get to the first cell, then move
@@ -185,6 +194,7 @@ size_t power(size_t base, size_t exp) {
     for (size_t i = 0; i < exp; i++) {
         result *= base;
     }
+
     return result;
 }
 
@@ -217,10 +227,11 @@ void initialize_handler_string(size_t size) {
         advance_word_size_t(inspector, 1);
     }
     // Change the last flag so that the non-available cells are set to 1.
-    inspector = (size_t *)handler_string + 1;
+    inspector = (size_t *) handler_string + 1;
     advance_word_size_t(inspector, number_of_flag_words - 1);
+
     // Get the max value of size_t, so everything is 1.
-    size_t flags = (size_t)-1;
+    size_t flags = (size_t) -1;
     size_t flags_in_last_block = max_cells % 64;
     for (size_t i = 0; i < flags_in_last_block; i++) {
         flags -= power(2, i);
@@ -231,7 +242,7 @@ void initialize_handler_string(size_t size) {
 void initialize_handler_data(size_t size) {
     // The first size_t is reserved for the pointer to the first available area.
     size_t *inspector = handler_data;
-    *inspector = (size_t)(inspector + 1);
+    *inspector = (size_t) (inspector + 1);
 
     advance_word_size_t(inspector, 2);
     size_t available_size = size - sizeof(size_t);
@@ -253,6 +264,7 @@ String *str_alloc(size_t size) {
         initialize_handler_string(4096);
         initialize_handler_data(4096);
     }
+
     String *cell = request_string();
     if (cell == NULL) {
         return NULL;
@@ -260,12 +272,14 @@ String *str_alloc(size_t size) {
 
     cell->size = size;
     cell->allocated = size;
+
     // Request pointer to the data in the handler_data
     char *data = request_data(cell);
     if (data == NULL) {
         return NULL;
     }
     cell->data = data;
+
     return cell;
 }
 
@@ -287,9 +301,11 @@ String *str_concat(String *s1, String *s2) {
     size_t s1size = str_size(s1);
     size_t s2size = str_size(s2);
     String *s = str_alloc(s1size + s2size);
+
     char *sdata = str_data(s);
     memcpy(sdata, str_data(s1), s1size);
     memcpy(sdata + s1size, str_data(s2), s2size);
+
     return s;
 }
 
