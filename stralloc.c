@@ -292,10 +292,89 @@ String *str_alloc(size_t size) {
     return cell;
 }
 
+/// Frees the string structure by assigning the bit in the header to 0
+/// \param str The string struct to free
+void handler_string_free(const String *str) {
+    size_t *inspector = (size_t *) handler_string;
+    size_t number_of_blocks = *inspector;
+    advance_word_size_t(inspector, (number_of_blocks / 64 + 1));
+    String *string_inspector = (String *) inspector;
+    size_t index = str - string_inspector;
+    size_t word_offset = index / 64;
+    size_t bit_offset = index % 64;
+    size_t *flag_inspector = ((size_t *) handler_string) + 1 + word_offset;
+    // Flips the bit at the bit_offset, indexed 0 at the left.
+    *flag_inspector &= ~(1 << (sizeof(size_t) * 8 - 1 - bit_offset));
+}
+
+/// Adds free spaces together if they are next to each other in memory.
+void handler_data_amalgamate() {
+    bool modified = false;
+    /*
+     * This is the algorithm for amalgamation:
+     * 1. Keep previous at the set location, and check is current is next to
+     * previous, if so, merge them, then break out of the loop, if not, go to
+     * what current is pointing to and repeat until NULL.
+     * 2. If none of those worked, move previous to current, and current will
+     * once again iterate through all until it's NULL. These two will go until
+     * they both hit null, effectively checking all free block next to each
+     * other.
+     * 3. Keep doing 1 and 2 for every time that in a loop something was merged.
+     * 4. If nothing was merged, break out of the loop.
+     * While this might seem like a lot of iterating n^2, n shouldn't approach
+     * very high values, unless there was some really weird allocating and
+     * freeing of memory. Even then, str_compact will fix it.
+     */
+    do {
+        modified = false;
+        size_t *prev = (size_t *) handler_data;
+        while (prev != NULL) {
+            prev = (size_t *) *prev;
+            // Starts the iteration of curr at the first free block
+            size_t *curr = (size_t *)*(size_t *) handler_data;
+            size_t previous_size = *(prev + 1);
+            while (curr != NULL) {
+                curr = (size_t *) *curr;
+                if (curr == prev) continue;
+
+                size_t current_size = *(curr + 1);
+                if ((curr - prev) * sizeof(size_t) == previous_size) {
+                    // Merge the two blocks
+                    *prev = (size_t) *curr;
+                    *(prev + 1) = previous_size + current_size;
+                    modified = true;
+                    break;
+                }
+            }
+            if (modified) break;
+        }
+    } while (modified);
+}
+
+/// Frees the string structure by adding the metadata back to the linked list.
+/// \param data Pointer to the start of the data
+/// \param allocated Amount of memory that was allocated for the string
+void handler_data_free(char *data, size_t allocated) {
+    size_t *prev = (size_t *) handler_data;
+    size_t *curr = (size_t*) *prev;
+    size_t *new_block = (size_t *) data;
+
+    *prev = (size_t) new_block;
+    *new_block = (size_t) curr;
+    *(new_block + 1) = allocated;
+
+    handler_data_amalgamate();
+}
+
 /// Frees the selected string.
-/// \param str
+/// \param str String to be freed from memory.
 void str_free(String *str) {
-    return;
+    if (str == NULL) {
+        return;
+    }
+    handler_data_free(str->data, str->allocated);
+
+    handler_string_free(str);
 }
 
 /// Gets the size of the string
