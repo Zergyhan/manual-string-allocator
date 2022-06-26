@@ -242,12 +242,18 @@ void initialize_handler_string(size_t size) {
     *inspector = flags;
 }
 
+/// Initializes the handler_data so that the first size_t contains the
+/// pointer to the the 2nd word, the 2nd word is a pointer to null, and the 3rd
+/// is the size of the block minus the first head.
+/// \param size Size of the block allocated by mmap
 void initialize_handler_data(size_t size) {
     // The first size_t is reserved for the pointer to the first available area.
     size_t *inspector = handler_data;
     *inspector = (size_t) (inspector + 1);
+    advance_word_size_t(inspector, 1);
+    *inspector = (size_t) NULL;
 
-    advance_word_size_t(inspector, 2);
+    advance_word_size_t(inspector, 1);
     size_t available_size = size - sizeof(size_t);
     *inspector = available_size;
 }
