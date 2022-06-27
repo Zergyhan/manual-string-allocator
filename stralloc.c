@@ -230,7 +230,8 @@ void initialize_handler_string(size_t size, size_t *handler_string) {
     size_t max_cells = (size - sizeof(size_t)) / struct_string_size;
 
     // Now to reserve the flag areas.
-    size_t number_of_flag_words = ceil_size_t((double) max_cells / (double) 64);
+    size_t number_of_flag_words = ceil_size_t((double) max_cells / (double)
+            sizeof(size_t) * 8);
 
     // Readjust max_cells, I know there are cases where there might be a word
     // of flags that will just have 1s, but that is not too much of a problem.
