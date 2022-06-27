@@ -200,7 +200,7 @@ String *request_string(size_t *handler_string) {
     advance_word_size_t(end_of_metadata, 1);
     advance_word_size_t(end_of_metadata,
                         ceil_size_t((double) number_of_blocks /
-                        ((double) sizeof(size_t) * 8)));
+                                    ((double) sizeof(size_t) * 8)));
     String *cell = (String *) end_of_metadata;
     cell += cell_index;
     return cell;
@@ -231,7 +231,7 @@ void initialize_handler_string(size_t size, size_t *handler_string) {
 
     // Now to reserve the flag areas.
     size_t number_of_flag_words = ceil_size_t((double) max_cells / (double)
-            sizeof(size_t) * 8);
+            (sizeof(size_t) * 8));
 
     // Readjust max_cells, I know there are cases where there might be a word
     // of flags that will just have 1s, but that is not too much of a problem.
@@ -580,7 +580,7 @@ void str_compact(void) {
                 if ((mut_word &
                      ((size_t) 1 << (sizeof(size_t) * 8 - bit - 1)))) {
                     // Do the funny on this
-                    copy_new_data((String *)beginning_of_strings, word, bit);
+                    copy_new_data((String *) beginning_of_strings, word, bit);
                 }
             }
             if (finished) break;
@@ -592,7 +592,7 @@ void str_compact(void) {
     for (size_t i = 0; i < base_size; i += sizeof(size_t)) {
         if (*((size_t *) old_handler_handler_data + i) != 0) {
             munmap((void *) *((size_t *) old_handler_handler_data + i),
-                   base_size * power(2, i/sizeof(size_t)));
+                   base_size * power(2, i / sizeof(size_t)));
         }
     }
     munmap(old_handler_handler_data, base_size);
@@ -633,8 +633,8 @@ size_t str_livesize(void) {
                 // Goes from left to right, by checking with AND mask.
                 // Ex: 11011111 & 00100000 => index of the shift
                 if ((mut_word &
-                    ((size_t) 1 << (sizeof(size_t) * 8 - bit - 1)))) {
-                    livesize += str_get_size((String *)beginning_of_strings,
+                     ((size_t) 1 << (sizeof(size_t) * 8 - bit - 1)))) {
+                    livesize += str_get_size((String *) beginning_of_strings,
                                              word, bit);
                 }
             }
@@ -657,7 +657,7 @@ size_t str_freesize(void) {
             continue;
         }
         size_t *data_free_inspector = (size_t *) *data_block_inspector;
-        while ((size_t *)*data_free_inspector != NULL) {
+        while ((size_t *) *data_free_inspector != NULL) {
             data_free_inspector = (size_t *) *data_free_inspector;
             total_free += *(data_free_inspector + 1);
         }
@@ -679,8 +679,7 @@ size_t str_usedsize(void) {
         size_t index = 0;
         if (i == 0) {
             block_inspector = (size_t *) handler_handler_string;
-        }
-        else {
+        } else {
             block_inspector = (size_t *) handler_handler_data;
         }
 
@@ -689,8 +688,7 @@ size_t str_usedsize(void) {
                 used_size += base_size * power(2, index);
                 index++;
                 advance_word_size_t(block_inspector, 1);
-            }
-            else {
+            } else {
                 index++;
                 advance_word_size_t(block_inspector, 1);
             }
