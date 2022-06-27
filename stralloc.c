@@ -1,5 +1,8 @@
 /* stralloc.c --- Bibliothèque d'allocation de chaînes de caractères.  */
-
+/*
+ * Felix Rouleau 20188552
+ * Christian Lungescu 20079725
+ */
 
 #include "stralloc.h"
 #include <string.h>

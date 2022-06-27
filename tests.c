@@ -1,5 +1,8 @@
 /* tests.c --- Programme de tests pour stralloc.  */
-
+/*
+ * Felix Rouleau 20188552
+ * Christian Lungescu 20079725
+ */
 #include "stralloc.h"
 #include <stdio.h>
 #include <string.h>
