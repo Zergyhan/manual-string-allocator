@@ -37,6 +37,10 @@ int main (int argc, char **argv)
     s3 = s4;
   }
   /* À ce stade, seuls `s1`, `s2`, et `s3` sont "live".  */
+  printf("%zu\n", str_livesize ());
+  printf("%zu\n", str_size(s1));
+    printf("%zu\n", str_size(s2));
+    printf("%zu\n", str_size(s3));
   ASSERT (str_livesize () == str_size (s1) + str_size (s2) + str_size (s3));
 
   size_t before = str_usedsize ();
