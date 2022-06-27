@@ -291,6 +291,7 @@ String *str_alloc(size_t size) {
                                     MAP_ANONYMOUS | MAP_PRIVATE,
                                     0, 0);
         // Initialize them both to contain all 0s.
+        // Probably doesn't matter.
         size_t number_of_blocks = base_size / sizeof(size_t);
         for (size_t i = 0; i < number_of_blocks; i++) {
             *(((size_t *) handler_handler_string) + i) = 0;
@@ -497,25 +498,110 @@ String *str_concat(String *s1, String *s2) {
     return s;
 }
 
-/// Compacts the used data memory so that it is de-fragmented.
-void str_compact(void) {
-    /* Get all strings in handler_string, then get all their data in
-     * handler_data, and copy them over to a new mmap area, one after another,
-     * which will then compact and de-fragment them.
-     */
-    // One thing to take into consideration: allocated size can be changed if
-    // it fits properly now. Although still have to be at least 2 words.
-    void *new_handler_data = mmap(NULL, 4096,
-                                  PROT_READ | PROT_WRITE,
-                                  MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-    if (new_handler_data == MAP_FAILED) {
-        exit(EXIT_FAILURE);
+/// Copies the string into a new area of memory.
+/// \param string The beginning of the string area in memory.
+/// \param word Offset of words
+/// \param bit Offset of bits in last word
+void copy_new_data(String *string, size_t word, size_t bit) {
+    size_t base_size = sysconf(_SC_PAGESIZE);
+    size_t index = word * 64 + bit;
+    string += index;
+    char *old_data = string->data;
+    size_t size = string->size;
+    string->allocated = size;
+
+    index = 0;
+    while (size > (base_size * power(2, index))) {
+        index++;
     }
 
-
-//    munmap(handler_data, 4096)
+    char *data = NULL;
+    do {
+        size_t *handler_data =
+                (size_t *) handler_handler_data + index;
+        if (*handler_data == 0) {
+            // Create new block
+            size_t mmap_size = base_size * power(2, index);
+            *handler_data = (size_t) mmap(NULL,
+                                          mmap_size,
+                                          PROT_READ | PROT_WRITE,
+                                          MAP_ANONYMOUS | MAP_PRIVATE,
+                                          0, 0);
+            initialize_handler_data(mmap_size,
+                                    (size_t *) *handler_data);
+        }
+        data = request_data(string, (size_t *) *handler_data);
+        if (data == NULL) {
+            index++;
+        }
+        string->data = data;
+        string->handler_data = (size_t *) *handler_data;
+    } while (data == NULL);
+    memcpy(string->data, old_data, size);
 }
 
+/// Compacts the used data memory so that it is de-fragmented.
+void str_compact(void) {
+    /*
+     * Need to get all the current strings in the first string struct, then
+     * for every string allocate a new data area, copy the data over, and when
+     * it's done, free the old data area and all that was mmap.
+     */
+    void *old_handler_handler_data = handler_handler_data;
+    long base_size = sysconf(_SC_PAGESIZE);
+    handler_handler_data = mmap(NULL, base_size,
+                                PROT_READ | PROT_WRITE,
+                                MAP_ANONYMOUS | MAP_PRIVATE,
+                                0, 0);
+    for (size_t i = 0; i < base_size; i += sizeof(size_t)) {
+        *((size_t *) handler_handler_data + i) = (size_t) NULL;
+    }
+    size_t *handler_handler_inspector = (size_t *) handler_handler_string;
+    while ((size_t *) *handler_handler_inspector != NULL) {
+        // Loop through the flags and get the used strings.
+        size_t *handler_string_inspector =
+                (size_t *) *handler_handler_inspector;
+        size_t number_of_blocks = *handler_string_inspector;
+        size_t word_flags = number_of_blocks / (sizeof(size_t) * 8) + 1;
+        advance_word_size_t(handler_string_inspector, 1);
+        size_t *beginning_of_strings = handler_string_inspector + word_flags;
+
+        bool finished = false;
+        for (size_t word = 0; word < word_flags; word++) {
+            for (size_t bit = 0; bit < sizeof(size_t) * 8; bit++) {
+                if (word * 64 + bit > number_of_blocks) {
+                    finished = true;
+                    break;
+                }
+                size_t mut_word = *handler_string_inspector;
+                // Goes from left to right, by checking with AND mask.
+                // Ex: 11011111 & 00100000 => index of the shift
+                if ((mut_word &
+                     ((size_t) 1 << (sizeof(size_t) * 8 - bit - 1)))) {
+                    // Do the funny on this
+                    copy_new_data((String *)beginning_of_strings, word, bit);
+                }
+            }
+            if (finished) break;
+            advance_word_size_t(handler_string_inspector, 1);
+        }
+        advance_word_size_t(handler_handler_inspector, 1);
+    }
+    // Deallocate the old mmap areas
+    for (size_t i = 0; i < base_size; i += sizeof(size_t)) {
+        if (*((size_t *) old_handler_handler_data + i) != 0) {
+            munmap((void *) *((size_t *) old_handler_handler_data + i),
+                   base_size * power(2, i/sizeof(size_t)));
+        }
+    }
+    munmap(old_handler_handler_data, base_size);
+}
+
+/// Gets the size of the string in bytes
+/// \param string The beginning area for String structs
+/// \param word Index of current word of flags
+/// \param bit Index of current bit in word
+/// \return Size in bytes of the string.
 size_t str_get_size(String *string, size_t word, size_t bit) {
     size_t index = word * 64 + bit;
     string += index;
@@ -564,7 +650,11 @@ size_t str_livesize(void) {
 size_t str_freesize(void) {
     size_t *data_block_inspector = (size_t *) handler_handler_data;
     size_t total_free = 0;
-    while ((size_t *) *data_block_inspector != NULL) {
+    for (size_t i = 0; i < sysconf(_SC_PAGESIZE) / sizeof(size_t); i++) {
+        if ((size_t *) *data_block_inspector == NULL) {
+            advance_word_size_t(data_block_inspector, 1);
+            continue;
+        }
         size_t *data_free_inspector = (size_t *) *data_block_inspector;
         while ((size_t *)*data_free_inspector != NULL) {
             data_free_inspector = (size_t *) *data_free_inspector;
@@ -593,10 +683,16 @@ size_t str_usedsize(void) {
             block_inspector = (size_t *) handler_handler_data;
         }
 
-        while ((size_t *) *block_inspector != NULL) {
-            used_size += base_size * power(2, index);
-            index++;
-            advance_word_size_t(block_inspector, 1);
+        for (size_t j = 0; j < base_size / sizeof(size_t); j++) {
+            if ((size_t *) *block_inspector != NULL) {
+                used_size += base_size * power(2, index);
+                index++;
+                advance_word_size_t(block_inspector, 1);
+            }
+            else {
+                index++;
+                advance_word_size_t(block_inspector, 1);
+            }
         }
     }
 
