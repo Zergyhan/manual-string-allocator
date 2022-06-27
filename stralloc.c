@@ -1,11 +1,11 @@
 /* stralloc.c --- Bibliothèque d'allocation de chaînes de caractères.  */
 
+
 #include "stralloc.h"
 #include <string.h>
 #include<sys/mman.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <stdio.h>
 // Idk if we're allowed to modify makefile, so instead of adding -lm, I'll
 // implement my own math functions.
 // #include <math.h>
@@ -13,6 +13,10 @@
 
 // Required: 64-bit system. Tried to make it work on 32-bit, but there was no
 // way to test it. So it might work, it might not.
+
+// The amount of allocatable memory is unfortunately limited to 1e158 bytes
+// of memory, split between the structs and the data. If you need more, malloc()
+
 /*
  * Memory will be store in 2 blocks:
  * - The first block will be used to store the String struct,
@@ -555,14 +559,38 @@ size_t str_livesize(void) {
     return livesize;
 }
 
-///
+/// Returns the amount of 'free' memory available.
+/// \return Total amount of free memory in bytes.
 size_t str_freesize(void) {
     /* Not implemented.  */
     return 0;
 }
 
+/// Returns the total amount of memory used by stralloc.h.
+/// \return Total amount of used memory in bytes.
 size_t str_usedsize(void) {
-    /* Not implemented.  */
-    return 0;
+    size_t base_size = sysconf(_SC_PAGESIZE);
+
+    // Both headers
+    size_t used_size = base_size * 2;
+
+    for (size_t i = 0; i < 2; i++) {
+        size_t *block_inspector;
+        size_t index = 0;
+        if (i == 0) {
+            block_inspector = (size_t *) handler_handler_string;
+        }
+        else {
+            block_inspector = (size_t *) handler_handler_data;
+        }
+
+        while ((size_t *) *block_inspector != NULL) {
+            used_size += base_size * power(2, index);
+            index++;
+            advance_word_size_t(block_inspector, 1);
+        }
+    }
+
+    return used_size;
 }
 
