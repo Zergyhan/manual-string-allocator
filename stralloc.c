@@ -562,8 +562,17 @@ size_t str_livesize(void) {
 /// Returns the amount of 'free' memory available.
 /// \return Total amount of free memory in bytes.
 size_t str_freesize(void) {
-    /* Not implemented.  */
-    return 0;
+    size_t *data_block_inspector = (size_t *) handler_handler_data;
+    size_t total_free = 0;
+    while ((size_t *) *data_block_inspector != NULL) {
+        size_t *data_free_inspector = (size_t *) *data_block_inspector;
+        while ((size_t *)*data_free_inspector != NULL) {
+            data_free_inspector = (size_t *) *data_free_inspector;
+            total_free += *(data_free_inspector + 1);
+        }
+        advance_word_size_t(data_block_inspector, 1);
+    }
+    return total_free;
 }
 
 /// Returns the total amount of memory used by stralloc.h.
