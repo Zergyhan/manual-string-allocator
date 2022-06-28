@@ -18,7 +18,8 @@
 // way to test it. So it might work, it might not.
 
 // The amount of allocatable memory is unfortunately limited to 1e158 bytes
-// of memory, split between the structs and the data. If you need more, malloc()
+// of memory, split between the structs and the data.
+// If you need more, malloc()
 
 /*
  * Memory will be store in 2 blocks:
@@ -71,7 +72,8 @@ void *handler_handler_string = NULL;
  * handler_handler_data is the pointer to the block of memory pointers
  * that is used to store the data.
  * It is a more or less free for all area of memory.
- * The first size_t is the pointer to the head of the linked list of free areas.
+ * The first size_t is the pointer to the head
+ * of the linked list of free areas.
  * The word it points to is the beginning of the metadata of the cell.
  * The first word contains the pointer to the next area. The next word
  * is the size of the area. If null, there are no more cells available.
@@ -269,7 +271,8 @@ void initialize_handler_string(size_t size, size_t *handler_string) {
 /// is the size of the block minus the first head.
 /// \param size Size of the block allocated by mmap
 void initialize_handler_data(size_t size, size_t *handler_data) {
-    // The first size_t is reserved for the pointer to the first available area.
+    // The first size_t is reserved for the pointer to the first
+    // available area.
     size_t *inspector = handler_data;
     *inspector = (size_t) (inspector + 1);
     advance_word_size_t(inspector, 1);
@@ -309,7 +312,8 @@ String *str_alloc(size_t size) {
                                                            MAP_ANONYMOUS |
                                                            MAP_PRIVATE, 0, 0);
         *(size_t *) handler_handler_data = (size_t) mmap(NULL, base_size,
-                                                         PROT_READ | PROT_WRITE,
+                                                         PROT_READ |
+                                                         PROT_WRITE,
                                                          MAP_ANONYMOUS |
                                                          MAP_PRIVATE,
                                                          0, 0);
@@ -414,7 +418,8 @@ void handler_data_amalgamate(size_t *handler_data) {
      * once again iterate through all until it's NULL. These two will go until
      * they both hit null, effectively checking all free block next to each
      * other.
-     * 3. Keep doing 1 and 2 for every time that in a loop something was merged.
+     * 3. Keep doing 1 and 2 for every time that in a loop
+     * something was merged.
      * 4. If nothing was merged, break out of the loop.
      * While this might seem like a lot of iterating n^2, n shouldn't approach
      * very high values, unless there was some really weird allocating and
