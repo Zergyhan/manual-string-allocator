@@ -1,0 +1,186 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[table]{xcolor}
+\usepackage{listings}
+\usepackage{algpseudocode}
+\usepackage{fancyvrb}
+\usepackage{fancybox}            %For \ovalbox
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{wasysym}
+\usepackage{moreverb}
+\usepackage{comment}
+\usepackage{cancel}
+
+\lstset{
+    basicstyle=\ttfamily,
+    escapeinside={||},
+    xleftmargin=.1\textwidth,
+    mathescape=true,
+      literate=           %To have access to French accents in code blocks in lstlisting. For pseudocode and comments. See https://tex.stackexchange.com/a/85947
+        {à}{{\`a}}1
+        {â}{{\^a}}1
+        {ä}{{\"a}}1
+        {é}{{\'e}}1
+        {è}{{\`e}}1
+        {ê}{{\^e}}1
+        {ë}{{\"e}}1
+        {î}{{\^i}}1
+        {ï}{{\"i}}1
+        {ô}{{\^o}}1
+        {ö}{{\"o}}1
+        {ù}{{\`u}}1
+        {û}{{\^u}}1
+        {ü}{{\"u}}1
+        {ÿ}{{\"y}}1
+        {ç}{{\c{c}}}1
+        {À}{{\`A}}1
+        {Â}{{\^A}}1
+        {Ä}{{\"A}}1
+        {É}{{\'E}}1
+        {È}{{\`E}}1
+        {Ê}{{\^E}}1
+        {Ë}{{\"E}}1
+        {Î}{{\^I}}1
+        {Ï}{{\"I}}1
+        {Ô}{{\^O}}1
+        {Ö}{{\"O}}1
+        {Ù}{{\`U}}1
+        {Û}{{\^U}}1
+        {Ü}{{\"U}}1
+        {Ÿ}{{\"Y}}1
+        {Ç}{{\c{C}}}1
+}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead[L]{\nomUn, \nomDeux}
+\fancyhead[C]{\devoir}
+\fancyhead[R]{\sigle}
+
+\newcommand{\nomUn}{C. Lungescu}
+\newcommand{\nomcompletUn}{Christian Lungescu}
+\newcommand{\matriculeUn}{\texttt{Matricule 20079725}}
+\newcommand{\nomDeux}{F. Rouleau }%Félix}
+\newcommand{\nomcompletDeux}{Félix Rouleau}%Félix}
+\newcommand{\matriculeDeux}{\texttt{Matricule 20188552}}%Félix}
+\newcommand{\devoir}{Travail pratique 2}
+\newcommand{\sigle}{IFT 2035 E22}
+
+
+\title{Travail pratique 1}
+\author{
+\nomcompletUn\\
+\matriculeUn\\
+\nomcompletDeux\\
+\matriculeDeux
+}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Rapport}
+
+Pour commencer, au début du projet, avant d'avoir même ajouté la première ligne 
+de code, nous nous somme renseignés sur les plusieurs types d'allocation de mémoire
+possibles. Après nous être renseignés, pour ce projet, nous avons choisi deux styles. Un style avec des \texttt{sizes} fixes
+pour les structures, parce que leur \texttt{sizeof()} ne change pas. L'autre style était une avec 
+un linked list qui pointe aux areas de mémoire ouvertes. Ces deux ensembles 
+fonctionnent bien ensemble.\\
+Il y avait l'option de réimplémenter \texttt{ptmalloc2} ou
+quelque chose de ce style, mais c'était trop compliqué pour ce projet et c'est plus
+efficace avec des styles avec des \texttt{ints}, \texttt{floats}, etc., et non juste une structure fixe
+et des strings très variables en largeur.\\
+
+Le langage \texttt{C} lui-même n'était pas très difficile à utiliser, mais il faut toujours faire
+attention de ne pas implémenter de bugs, car c'est très facile de faire une erreur et se tirer dans 
+le pied.\\
+
+Le débogueur en \texttt{CLion} fonctionne extrêmement bien et nous
+a beaucoup aidé à débugger le programme lorsqu'on en avait besoin. Ça nous a pris un
+peu de temps pour comprendre qu'il fallait avoir \texttt{-d -O0} comme \texttt{CFLAGS} extra, mais après cela,
+tout est bien allé.\\
+
+Regarder les pointeurs en mémoire au aussi été très utile, nous ayant permis de
+savoir ce que les bugs faisaient et de les régler. Une technique qui a également aidé fut
+de garder un bout de papier avec un stylo près de notre ordinateur afin de dessiner et 
+écrire nos problèmes sur papier.\\
+
+Une chose qui nous a causé quelques problèmes initialement fut
+de toujours caster au bon pointeur avant d'avancer par un certain nombre,
+car il dépend du \texttt{sizeof()} du type.\\
+Parfois, à cause de cela, nous multiplions accidentellement
+et les offsets étaient mal calculés, ce qui causait des segmentation faults,
+modifiait des données non supposées être modifiées en mémoire, et faisait également en sorte qu'il
+n'y avait rien à la place où l'on se rendait. Après avoir réglé cela, il ne fut pas trop
+difficile de se rendre compte des effets causés par cette erreur.\\
+
+\pagebreak
+
+\section*{Annexe}
+Ce système utilise deux headers: un pour stocker les \texttt{String struct} et un pour
+stocker les caractères des \texttt{String}. Les headers pointent vers des pages qui
+augmentent de $2^index$ à chaque fois. Par exemple : \texttt{4096B}, \texttt{8192B}, \texttt{16384B}, \texttt{32768B}, etc.\\
+Ceci fait en sorte que nous pouvons gérer beaucoup de mémoire dans un seul header.\\
+
+À la base, le système utilise \texttt{sysconf(\_SC\_PAGESIZE)} bytes comme header de base.
+Sur un système normal, cela correspond à 4096 bytes. 64 bit prend 8 bytes 
+pour 1 pointeur, alors nous pouvons pointer à 512 pages différentes pour le 
+\texttt{String struct} lui-même et pour le data. Alors jusqu'à $5 \times 10^157$ bytes de data
+peuvent être stockés.\\
+
+Chaque \texttt{(size\_t *)} du header pointe vers une page si elle est initialisée et \texttt{NULL}
+sinon.\\
+
+La première sorte de page dont nous allons discuter est la page de \texttt{String structs}.\\
+Le premier \texttt{size\_t} dans cette page contient le nombre de \texttt{String structs} qui peuvent être
+stockés. Ensuite, les prochains words, en fonction du nombre de \texttt{String structs} qui 
+peuvent être stockés, contient des flags qui indiquent si la case est utilisée par un 
+\texttt{String} ou non. L'allocation et la désallocation se font en flippant ce bit.\\
+Les indexs sont calculés par le nombre de words utilisés pour des 
+
+\begin{lstlisting}
+flags * sizeof(size_t) * 8 + # du bit
+\end{lstlisting}
+Par la suite, nous pouvons aller à la fin du metadata 
+en calculant où ça termine, et après, sauter \texttt{(String *)} index. Ici, nous pouvons facilement
+faire nos \texttt{str->} pour accéder aux données. Dans celui-ci, on a \texttt{allocated size}, au cas où
+ca différerait du \texttt{actual size}, on a \texttt{size}, le \texttt{size requested}, \texttt{char *data}, dans quelle page
+de \texttt{String structs} qu'il est et finalement vers quelle page de \texttt{data} le \texttt{char *data} pointe.\\
+Il y a très peu de overhead pour le metadata, mais ca vient avec un \texttt{cout} en 
+efficacité de temps.\\
+
+La deuxième sorte de page est la page de \texttt{data}. Celle-ci est très facile à comparer, car 
+elle alloue des \texttt{size} variables. L'entrée est simplement un pointeur \texttt{(size\_t *)} qui
+pointe vers la première place de libre (Linked list) dans la page. Ce qu'elle pointe
+spécifiquement est un autre pointeur vers la prochaine place de la Linked list. Le \texttt{(size\_t)}
+juste à côté du pointeur est lenombre  de bytes libres pour ce node. Malheureusement, 
+l'amalgamage n'est pas implementé, donc il faut faire \texttt{str\_compact()} pour le même effet.\\
+
+Nous ne stockons pas le nombre de bytes qu'est chaque page, car sa position dans le header
+correspond à \texttt{(sysconf(\_SC\_PAGESIZE) * 2\^index)}.\\
+
+Le stockage d'une chaîne de taille N est : \texttt{N Bytes (minimum 16) + sizeof(String)}.\\
+Ceux-ci contiennent aussi 8 bytes pour le head pointer, 8 pour le nombre de strings dans 
+la page \texttt{String}, et \texttt{ceil\_size\_t((double) max\_cells / (double) sizeof(size\_t) * 8)}.
+Ceci se fait en plus que $O(1)$, mais moins que $O(n)$.\\
+
+La libération prend un temps $O(1)$, toujours constant, car on ne fait que réécrire le metadata et flipper un bit.
+La compactation prend un temps $O(n)$ avec le nombre de strings à compacter.\\
+
+La fragmentation est un gros problème, seulement pour les \texttt{char*}, car il n'y a pas d'amalgamage. 
+Cela fait en sorte qu'un bloc reste d'une certaine largeur après avoir été alloué.\\
+Si nous avions assez de temps pour implémenter un système qui fonctionnait, ça ne serait plus
+un gros problème.\\
+
+\end{document}
